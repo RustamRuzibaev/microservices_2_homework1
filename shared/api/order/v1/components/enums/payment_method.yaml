@@ -1,0 +1,15 @@
+type: string
+nullable: true
+description: Способ оплаты
+enum:
+  - UNKNOWN
+  - CARD
+  - SBP
+  - CREDIT_CARD
+  - INVESTOR_MONEY
+x-enum-descriptions:
+  - "0 Неизвестный способ"
+  - "1 Банковская карта"
+  - "2 СБП"
+  - "3 Кредитная карта"
+  - "4 Деньги инвестора"
