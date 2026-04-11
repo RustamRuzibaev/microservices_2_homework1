@@ -10,12 +10,10 @@ properties:
     type: string
     format: uuid
     description: Уникальный идентификатор заказа
-    length: 36
     example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
   user_uuid:
     type: string
     description: UUID пользователя
-    length: 36
     example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
   part_uuids:
     type: array
@@ -32,9 +30,8 @@ properties:
     type: string
     format: uuid
     description: UUID транзакции (если оплачен)
-    length: 36
     example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
   payment_method:
-    $ref: ./components/enum/payment_method.yaml
+    $ref: ./enums/payment_method.yaml
   status:
-    $ref: ./components/enum/order_status.yaml
+    $ref: ./enums/order_status.yaml

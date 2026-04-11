@@ -1,0 +1,9 @@
+type: object
+allOf:
+  - $ref: ./order_dto.yaml
+required:
+  - order_uuid
+  - user_uuid
+  - part_uuids
+  - total_price
+  - status

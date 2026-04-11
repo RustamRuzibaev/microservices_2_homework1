@@ -1,0 +1,36 @@
+parameters:
+  - $ref: ../params/order_uuid.yaml
+
+post:
+  summary: Cancel order by UUID
+  description: Cancel Order
+  operationId: CancelOrder
+  tags:
+    - Order
+  responses:
+    '204':
+      description: Order has been cancelled successfully
+    '404':
+      description: Order data for specified uuid not found
+      content:
+        application/json:
+          schema:
+            $ref: ../components/errors/not_found_error.yaml
+    '409':
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: ../components/errors/conflict_error.yaml
+    '500':
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: ../components/errors/internal_server_error.yaml
+    default:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: ../components/errors/generic_error.yaml

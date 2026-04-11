@@ -3,7 +3,7 @@ parameters:
 
 get:
   summary: Get order data by uuid
-  operationId:  GetOrderByUuid
+  operationId: GetOrderByUuid
   tags:
   - Order
   responses:

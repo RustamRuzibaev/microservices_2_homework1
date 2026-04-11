@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+// Package payment.v1 содержит API для работы с PaymentService
+package payment.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/empty.proto";
+//import "google/api/annotations.proto";
+//import "validate/validate.proto";
+
+option go_package = "github.com/RustamRuzibaev/microservices_2_homework1/shared/pkg/proto/payment/v1;payment_v1";
+
+// PaymentService предоставляет API для работы с оплатой заказов
+service PaymentService {
+  // PayOrder - метод оплаты заказа
+  rpc PayOrder(PayOrderRequest) returns (PayOrderResponse);
+
+}
+
+// Перечисление способов оплаты
+enum PaymentMethod {
+  // Неизвестный способ
+  PAYMENT_METHOD_UNKNOWN = 0;
+
+  // Банковская карта
+  PAYMENT_METHOD_CARD = 1;
+
+  // Система быстрых платежей
+  PAYMENT_METHOD_SBP = 2;
+
+  // Кредитная карта
+  PAYMENT_METHOD_CREDIT_CARD = 3;
+
+  // Деньги инвестора (внутренний метод)
+  PAYMENT_METHOD_INVESTOR_MONEY = 4;
+}
+
+// PayOrderRequestRequest запрос на оплату заказа
+message PayOrderRequest {
+  // order_uuid идентификатор заказа
+  string order_uuid = 1;
+  // user_uuid идентификатор пользователя
+  string user_uuid = 2;
+  // Способ оплаты
+  PaymentMethod payment_method = 3;
+}
+
+// PayOrderResponse ответ на запрос оплаты заказа
+message PayOrderResponse {
+  // transaction_uuid идентификатор проведённой транзакции
+  string transaction_uuid = 1;
+}
+

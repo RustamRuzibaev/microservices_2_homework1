@@ -1,0 +1,169 @@
+syntax = "proto3";
+
+// Package inventory.v1 содержит API для работы с InventoryService
+package inventory.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/empty.proto";
+//import "google/api/annotations.proto";
+//import "validate/validate.proto";
+
+option go_package = "github.com/RustamRuzibaev/microservices_2_homework1/shared/pkg/proto/inventory/v1;inventory_v1";
+
+// InventoryService предоставляет API для работы с ранением и предоставлением информации о деталях для сборки космических кораблей
+service PaymentService {
+  // GetPart - возвращает информацию о детали по её UUID.
+  rpc GetPart(GetPartRequest) returns (GetPartResponse);
+  // ListParts - возвращает список деталей с возможностью фильтрации.
+  rpc ListParts(ListPartsRequest) returns (ListPartsResponse);
+
+}
+
+// GetPartRequest запрос на получение информации о детали по её UUID
+message GetPartRequest {
+  // идентификатор детали
+  string uuid = 1;
+}
+
+// GetPartResponse ответ c полученной информацией о детали
+message GetPartResponse {
+  // информация о детали
+  Part part = 1;
+}
+
+// rpc ListParts(ListPartsRequest) returns (ListPartsResponse);
+
+// ListPartsRequest запрос на получение списка деталей с возможностью фильтрации.
+message ListPartsRequest {
+  // Фильтр по деталям (все поля опциональны)
+ PartsFilter filter = 1;
+}
+
+// ListPartsResponse список деталей с возможностью фильтрации.
+message ListPartsResponse {
+  // Список найденных деталей
+ repeated Part parts = 1;
+}
+
+// PartsFilter фильтр по деталям (все поля опциональны)
+message PartsFilter {
+  // uuids - список UUID'ов. Пусто — не фильтруем по UUID
+  repeated string uuids = 1;
+  
+  // names - список имён. Пусто — не фильтруем по имени
+  repeated string names = 2;
+  
+  // categories - cписок категорий. Пусто — не фильтруем по категории
+  repeated Category categories = 3;
+
+  // manufacturer_countries - список стран производителей. Пусто — не фильтруем по стране
+  double manufacturer_countries = 4;
+  
+  // tags - список тегов. Пусто — не фильтруем по тегам
+  repeated string tags = 5;
+}
+
+// Part информация о детали
+message Part {
+  // uuid - уникальный идентификатор детали
+  string uuid = 1;
+  
+  // name - название детали
+  string name = 2;
+  
+  // description - описание детали
+  string description = 3;
+
+  // price - цена за единицу
+  double price = 4;
+  
+  // stock_quantity - количество на складе
+  int64 stock_quantity = 5;
+
+  // category - категория
+  Category category = 6;
+
+  // dimensions - размеры детали
+  Dimensions dimensions = 7;
+  
+  // manufacturer - информация о производителе
+  Manufacturer manufacturer = 8;
+  
+  // tags - теги для быстрого поиска
+  repeated string tags = 9;
+
+  // metadata - гибкие метаданные
+  map<string, Value> metadata = 10;
+  
+  // created_at - дата создания
+  google.protobuf.Timestamp created_at = 11;
+
+  // updated_at время последнего обновления
+  google.protobuf.Timestamp updated_at = 12;
+
+}
+
+// Перечисление категорий
+enum Category {
+  // Неизвестная категория
+  UNKNOWN = 0;
+
+  // Двигатель
+  ENGINE = 1;
+
+  // Топливо
+  FUEL = 2;
+
+  // Иллюминатор
+  PORTHOLE = 3;
+
+  // Крыло
+  WING = 4;
+}
+
+// Dimensions - информация о размерах
+message Dimensions {
+  // length - длина в см
+  double length = 1;
+
+  // width - ширина в см
+  double width = 2;
+
+  // height - высота в см
+  double height = 3;
+
+  // weight - вес в кг
+  double weight = 4;
+}
+
+// Manufacturer - информация о производителе
+message Manufacturer {
+  // name - название
+  string name = 1;
+
+  // country - страна производства
+  string country = 2;
+
+  //website - сайт производителя
+  string website = 3;
+}
+
+// Value - тип значения для metadata
+message Value {
+  // type - тип значения, один из
+  oneof type {
+
+    // string_value - строковое значение
+    string string_value = 1;
+
+    // int64_value - целое значение
+    int64 int64_value = 2;
+
+    // double_value - дробное значение
+    double double_value = 3;
+
+    // bool_value - логическое значение
+    bool bool_value = 4;
+  }
+}
