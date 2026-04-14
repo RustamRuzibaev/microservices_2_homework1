@@ -12,7 +12,7 @@ import "google/protobuf/empty.proto";
 option go_package = "github.com/RustamRuzibaev/microservices_2_homework1/shared/pkg/proto/inventory/v1;inventory_v1";
 
 // InventoryService предоставляет API для работы с ранением и предоставлением информации о деталях для сборки космических кораблей
-service PaymentService {
+service InventoryService {
   // GetPart - возвращает информацию о детали по её UUID.
   rpc GetPart(GetPartRequest) returns (GetPartResponse);
   // ListParts - возвращает список деталей с возможностью фильтрации.

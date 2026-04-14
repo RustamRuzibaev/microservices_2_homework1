@@ -822,8 +822,8 @@ const file_inventory_v1_inventory_proto_rawDesc = "" +
 	"\x06ENGINE\x10\x01\x12\b\n" +
 	"\x04FUEL\x10\x02\x12\f\n" +
 	"\bPORTHOLE\x10\x03\x12\b\n" +
-	"\x04WING\x10\x042\xa6\x01\n" +
-	"\x0ePaymentService\x12F\n" +
+	"\x04WING\x10\x042\xa8\x01\n" +
+	"\x10InventoryService\x12F\n" +
 	"\aGetPart\x12\x1c.inventory.v1.GetPartRequest\x1a\x1d.inventory.v1.GetPartResponse\x12L\n" +
 	"\tListParts\x12\x1e.inventory.v1.ListPartsRequest\x1a\x1f.inventory.v1.ListPartsResponseB`Z^github.com/RustamRuzibaev/microservices_2_homework1/shared/pkg/proto/inventory/v1;inventory_v1b\x06proto3"
 
@@ -867,10 +867,10 @@ var file_inventory_v1_inventory_proto_depIdxs = []int32{
 	11, // 8: inventory.v1.Part.created_at:type_name -> google.protobuf.Timestamp
 	11, // 9: inventory.v1.Part.updated_at:type_name -> google.protobuf.Timestamp
 	9,  // 10: inventory.v1.Part.MetadataEntry.value:type_name -> inventory.v1.Value
-	1,  // 11: inventory.v1.PaymentService.GetPart:input_type -> inventory.v1.GetPartRequest
-	3,  // 12: inventory.v1.PaymentService.ListParts:input_type -> inventory.v1.ListPartsRequest
-	2,  // 13: inventory.v1.PaymentService.GetPart:output_type -> inventory.v1.GetPartResponse
-	4,  // 14: inventory.v1.PaymentService.ListParts:output_type -> inventory.v1.ListPartsResponse
+	1,  // 11: inventory.v1.InventoryService.GetPart:input_type -> inventory.v1.GetPartRequest
+	3,  // 12: inventory.v1.InventoryService.ListParts:input_type -> inventory.v1.ListPartsRequest
+	2,  // 13: inventory.v1.InventoryService.GetPart:output_type -> inventory.v1.GetPartResponse
+	4,  // 14: inventory.v1.InventoryService.ListParts:output_type -> inventory.v1.ListPartsResponse
 	13, // [13:15] is the sub-list for method output_type
 	11, // [11:13] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
