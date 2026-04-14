@@ -11,13 +11,37 @@ import "google/protobuf/empty.proto";
 
 option go_package = "github.com/RustamRuzibaev/microservices_2_homework1/shared/pkg/proto/inventory/v1;inventory_v1";
 
-// InventoryService предоставляет API для работы с ранением и предоставлением информации о деталях для сборки космических кораблей
+// InventoryService предоставляет API для работы с хранением и предоставлением информации о деталях для сборки космических кораблей
 service InventoryService {
+  // AddPart - добавляет деталь в хранилище.
+  rpc AddPart(AddPartRequest) returns (AddPartResponse);
+  // DeletePart - удаляет деталь из хранилища.
+  rpc DeletePart(DeletePartRequest) returns (google.protobuf.Empty);
   // GetPart - возвращает информацию о детали по её UUID.
   rpc GetPart(GetPartRequest) returns (GetPartResponse);
   // ListParts - возвращает список деталей с возможностью фильтрации.
   rpc ListParts(ListPartsRequest) returns (ListPartsResponse);
 
+
+}
+
+
+// AddPartRequest запрос на добавление детали в хранилище по вводной информации о детали
+message AddPartRequest {
+  // информация о детали
+  Part part = 1;
+}
+
+// AddPartResponse ответ о добавлении детали в хранилище с сгенерированным UUID детали
+message AddPartResponse {
+  // идентификатор детали
+  string uuid = 1;
+}
+
+// DeletePartRequest запрос на удаление детали по её UUID
+message DeletePartRequest {
+  // идентификатор детали
+  string uuid = 1;
 }
 
 // GetPartRequest запрос на получение информации о детали по её UUID
@@ -31,8 +55,6 @@ message GetPartResponse {
   // информация о детали
   Part part = 1;
 }
-
-// rpc ListParts(ListPartsRequest) returns (ListPartsResponse);
 
 // ListPartsRequest запрос на получение списка деталей с возможностью фильтрации.
 message ListPartsRequest {
