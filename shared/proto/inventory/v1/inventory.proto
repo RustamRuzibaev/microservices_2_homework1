@@ -80,7 +80,7 @@ message PartsFilter {
   repeated Category categories = 3;
 
   // manufacturer_countries - список стран производителей. Пусто — не фильтруем по стране
-  double manufacturer_countries = 4;
+  repeated string manufacturer_countries = 4;
   
   // tags - список тегов. Пусто — не фильтруем по тегам
   repeated string tags = 5;

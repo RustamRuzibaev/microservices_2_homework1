@@ -419,7 +419,7 @@ type PartsFilter struct {
 	// categories - cписок категорий. Пусто — не фильтруем по категории
 	Categories []Category `protobuf:"varint,3,rep,packed,name=categories,proto3,enum=inventory.v1.Category" json:"categories,omitempty"`
 	// manufacturer_countries - список стран производителей. Пусто — не фильтруем по стране
-	ManufacturerCountries float64 `protobuf:"fixed64,4,opt,name=manufacturer_countries,json=manufacturerCountries,proto3" json:"manufacturer_countries,omitempty"`
+	ManufacturerCountries []string `protobuf:"bytes,4,rep,name=manufacturer_countries,json=manufacturerCountries,proto3" json:"manufacturer_countries,omitempty"`
 	// tags - список тегов. Пусто — не фильтруем по тегам
 	Tags          []string `protobuf:"bytes,5,rep,name=tags,proto3" json:"tags,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -477,11 +477,11 @@ func (x *PartsFilter) GetCategories() []Category {
 	return nil
 }
 
-func (x *PartsFilter) GetManufacturerCountries() float64 {
+func (x *PartsFilter) GetManufacturerCountries() []string {
 	if x != nil {
 		return x.ManufacturerCountries
 	}
-	return 0
+	return nil
 }
 
 func (x *PartsFilter) GetTags() []string {
@@ -919,7 +919,7 @@ const file_inventory_v1_inventory_proto_rawDesc = "" +
 	"\n" +
 	"categories\x18\x03 \x03(\x0e2\x16.inventory.v1.CategoryR\n" +
 	"categories\x125\n" +
-	"\x16manufacturer_countries\x18\x04 \x01(\x01R\x15manufacturerCountries\x12\x12\n" +
+	"\x16manufacturer_countries\x18\x04 \x03(\tR\x15manufacturerCountries\x12\x12\n" +
 	"\x04tags\x18\x05 \x03(\tR\x04tags\"\xd5\x04\n" +
 	"\x04Part\x12\x12\n" +
 	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x12\n" +
