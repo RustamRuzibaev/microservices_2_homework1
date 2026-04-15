@@ -19,115 +19,162 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	ufoV1 "github.com/olezhek28/microservices-course-examples/week_1/grpc/pkg/proto/ufo/v1"
+	//	ufoV1 "github.com/olezhek28/microservices-course-examples/week_1/grpc/pkg/proto/ufo/v1"
+	inventoryV1 "github.com/RustamRuzibaev/microservices_2_homework1/shared/pkg/proto/inventory/v1"
 )
 
 const grpcPort = 50051
 
-// ufoService реализует gRPC сервис для работы с наблюдениями НЛО
-type ufoService struct {
-	ufoV1.UnimplementedUFOServiceServer
+// inventoryService реализует gRPC сервис отвечающий за хранение
+//
+//	и предоставление информации о деталях для сборки космических кораблей.
+type inventoryService struct {
+	inventoryV1.UnimplementedInventoryServiceServer
 
-	mu        sync.RWMutex
-	sightings map[string]*ufoV1.Sighting
+	mu    sync.RWMutex
+	parts map[string]*inventoryV1.Part
 }
 
-// Create создает новое наблюдение НЛО
-func (s *ufoService) Create(_ context.Context, req *ufoV1.CreateRequest) (*ufoV1.CreateResponse, error) {
+// AddPart создает новое наблюдение НЛО
+func (s *inventoryService) AddPart(_ context.Context, req *inventoryV1.AddPartRequest) (*inventoryV1.AddPartResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	// Генерируем UUID для нового наблюдения
 	newUUID := uuid.NewString()
 
-	sighting := &ufoV1.Sighting{
-		Uuid:      newUUID,
-		Info:      req.GetInfo(),
-		CreatedAt: timestamppb.New(time.Now()),
+	part := &inventoryV1.Part{
+		Uuid:          newUUID,
+		Name:          req.Part.GetName(),
+		Description:   req.Part.GetDescription(),
+		Price:         req.Part.GetPrice(),
+		StockQuantity: req.Part.GetStockQuantity(),
+		Category:      req.Part.GetCategory(),
+		Dimensions:    req.Part.GetDimensions(),
+		Manufacturer:  req.Part.GetManufacturer(),
+		Tags:          req.Part.GetTags(),
+		Metadata:      req.Part.GetMetadata(),
+		CreatedAt:     timestamppb.New(time.Now()),
+		UpdatedAt:     timestamppb.New(time.Now()),
 	}
 
-	s.sightings[newUUID] = sighting
+	s.parts[newUUID] = part
 
-	log.Printf("Создано наблюдение с UUID %s", newUUID)
+	log.Printf("Добавлена деталь с UUID %s", newUUID)
 
-	return &ufoV1.CreateResponse{
+	return &inventoryV1.AddPartResponse{
 		Uuid: newUUID,
 	}, nil
 }
 
-// Get возвращает наблюдение НЛО по UUID
-func (s *ufoService) Get(_ context.Context, req *ufoV1.GetRequest) (*ufoV1.GetResponse, error) {
+// Get возвращает информацию о детали по UUID
+func (s *inventoryService) GetPart(_ context.Context, req *inventoryV1.GetPartRequest) (*inventoryV1.GetPartResponse, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	sighting, ok := s.sightings[req.GetUuid()]
+	part, ok := s.parts[req.GetUuid()]
 	if !ok {
-		return nil, status.Errorf(codes.NotFound, "sighting with UUID %s not found", req.GetUuid())
+		return nil, status.Errorf(codes.NotFound, "part with UUID %s not found", req.GetUuid())
 	}
 
-	return &ufoV1.GetResponse{
-		Sighting: sighting,
+	return &inventoryV1.GetPartResponse{
+		Part: part,
 	}, nil
 }
 
-// Update обновляет существующее наблюдение НЛО
-func (s *ufoService) Update(_ context.Context, req *ufoV1.UpdateRequest) (*emptypb.Empty, error) {
+// // Update обновляет существующее наблюдение НЛО
+// func (s *inventoryService) Update(_ context.Context, req *inventoryV1.UpdateRequest) (*emptypb.Empty, error) {
+// 	s.mu.Lock()
+// 	defer s.mu.Unlock()
+
+// 	part, ok := s.parts[req.GetUuid()]
+// 	if !ok {
+// 		return nil, status.Errorf(codes.NotFound, "part with UUID %s not found", req.GetUuid())
+// 	}
+
+// 	if req.UpdateInfo == nil {
+// 		return nil, status.Error(codes.InvalidArgument, "update_info cannot be nil")
+// 	}
+
+// 	// Обновляем поля, только если они были установлены в запросе
+// 	if req.GetUpdateInfo().ObservedAt != nil {
+// 		part.Info.ObservedAt = req.GetUpdateInfo().ObservedAt
+// 	}
+
+// 	if req.GetUpdateInfo().Location != nil {
+// 		part.Info.Location = req.GetUpdateInfo().Location.Value
+// 	}
+
+// 	if req.GetUpdateInfo().Description != nil {
+// 		part.Info.Description = req.GetUpdateInfo().Description.Value
+// 	}
+
+// 	if req.GetUpdateInfo().Color != nil {
+// 		part.Info.Color = req.GetUpdateInfo().Color
+// 	}
+
+// 	if req.GetUpdateInfo().Sound != nil {
+// 		part.Info.Sound = req.GetUpdateInfo().Sound
+// 	}
+
+// 	if req.GetUpdateInfo().DurationSeconds != nil {
+// 		part.Info.DurationSeconds = req.GetUpdateInfo().DurationSeconds
+// 	}
+
+// 	part.UpdatedAt = timestamppb.New(time.Now())
+
+// 	return &emptypb.Empty{}, nil
+// }
+
+// Delete удаляет запись о детали
+func (s *inventoryService) DeletePart(_ context.Context, req *inventoryV1.DeletePartRequest) (*emptypb.Empty, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	sighting, ok := s.sightings[req.GetUuid()]
+	part, ok := s.parts[req.GetUuid()]
 	if !ok {
-		return nil, status.Errorf(codes.NotFound, "sighting with UUID %s not found", req.GetUuid())
+		return nil, status.Errorf(codes.NotFound, "part with UUID %s not found", req.GetUuid())
 	}
 
-	if req.UpdateInfo == nil {
-		return nil, status.Error(codes.InvalidArgument, "update_info cannot be nil")
-	}
-
-	// Обновляем поля, только если они были установлены в запросе
-	if req.GetUpdateInfo().ObservedAt != nil {
-		sighting.Info.ObservedAt = req.GetUpdateInfo().ObservedAt
-	}
-
-	if req.GetUpdateInfo().Location != nil {
-		sighting.Info.Location = req.GetUpdateInfo().Location.Value
-	}
-
-	if req.GetUpdateInfo().Description != nil {
-		sighting.Info.Description = req.GetUpdateInfo().Description.Value
-	}
-
-	if req.GetUpdateInfo().Color != nil {
-		sighting.Info.Color = req.GetUpdateInfo().Color
-	}
-
-	if req.GetUpdateInfo().Sound != nil {
-		sighting.Info.Sound = req.GetUpdateInfo().Sound
-	}
-
-	if req.GetUpdateInfo().DurationSeconds != nil {
-		sighting.Info.DurationSeconds = req.GetUpdateInfo().DurationSeconds
-	}
-
-	sighting.UpdatedAt = timestamppb.New(time.Now())
+	// Мягкое удаление - устанавливаем deleted_at
+	//part.DeletedAt = timestamppb.New(time.Now())
+	// Удаление из мапы по ключу (Uuid)
+	delete(s.parts, part.Uuid)
 
 	return &emptypb.Empty{}, nil
 }
 
-// Delete удаляет наблюдение НЛО (мягкое удаление - устанавливает deleted_at)
-func (s *ufoService) Delete(_ context.Context, req *ufoV1.DeleteRequest) (*emptypb.Empty, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *inventoryService) ListParts(_ context.Context, req *inventoryV1.ListPartsRequest) (*inventoryV1.ListPartsResponse, error) {
+	//TODO:
+	// - `ListParts`:
+	//     - Если все поля фильтра пусты — возвращаются все детали.
+	//     - Фильтрация происходит по принципу:
+	//         - *логическое ИЛИ внутри одного поля фильтра* (например, имя `"main"` **или** `"main booster"`)
+	//         - *логическое И между различными полями* (например, категория = `ENGINE` **и** страна = `"Germany"`)
+	//     - Допустимо реализовать фильтрацию через **несколько последовательных проходов**:
+	//         - сначала по UUID,
+	//         - затем по имени,
+	//         - затем по категории,
+	//         - затем по странам производителей,
+	//         - затем по тегам.
 
-	sighting, ok := s.sightings[req.GetUuid()]
-	if !ok {
-		return nil, status.Errorf(codes.NotFound, "sighting with UUID %s not found", req.GetUuid())
+	// слайс возвращаемых деталей
+	parts := make([]*inventoryV1.Part, 0, len(s.parts))
+	if len(req.Filter.GetUuids()) == 0 &&
+		len(req.Filter.GetNames()) == 0 &&
+		len(req.Filter.GetCategories()) == 0 &&
+		len(req.Filter.GetManufacturerCountries()) == 0 &&
+		len(req.Filter.GetTags()) == 0 {
+		for _, part := range s.parts {
+			parts = append(parts, part)
+		}
+	} else {
+		return nil, status.Errorf(codes.Unimplemented, "Full search is still not implented for filter %v", req.Filter.String())
 	}
+	return &inventoryV1.ListPartsResponse{
+		Parts: parts,
+	}, nil
 
-	// Мягкое удаление - устанавливаем deleted_at
-	sighting.DeletedAt = timestamppb.New(time.Now())
-
-	return &emptypb.Empty{}, nil
 }
 
 func main() {
@@ -146,11 +193,11 @@ func main() {
 	s := grpc.NewServer()
 
 	// Регистрируем наш сервис
-	service := &ufoService{
-		sightings: make(map[string]*ufoV1.Sighting),
+	service := &inventoryService{
+		parts: make(map[string]*inventoryV1.Part),
 	}
 
-	ufoV1.RegisterUFOServiceServer(s, service)
+	inventoryV1.RegisterInventoryServiceServer(s, service)
 
 	// Включаем рефлексию для отладки
 	reflection.Register(s)
