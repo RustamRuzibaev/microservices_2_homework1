@@ -19,7 +19,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	//	ufoV1 "github.com/olezhek28/microservices-course-examples/week_1/grpc/pkg/proto/ufo/v1"
 	inventoryV1 "github.com/RustamRuzibaev/microservices_2_homework1/shared/pkg/proto/inventory/v1"
 )
 
@@ -194,6 +193,7 @@ func main() {
 
 	// Регистрируем наш сервис
 	service := &inventoryService{
+		mu:    sync.RWMutex{},
 		parts: make(map[string]*inventoryV1.Part),
 	}
 
