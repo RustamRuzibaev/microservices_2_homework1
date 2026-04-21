@@ -44,8 +44,32 @@ func (s *BadRequestError) SetMessage(val string) {
 func (*BadRequestError) createOrderRes()    {}
 func (*BadRequestError) getOrderByUuidRes() {}
 
-// CancelOrderNoContent is response for CancelOrder operation.
-type CancelOrderNoContent struct{}
+type CancelOrderNoContent struct {
+	// HTTP-код ответа.
+	Code int `json:"code"`
+	// Описание ответа.
+	Message string `json:"message"`
+}
+
+// GetCode returns the value of Code.
+func (s *CancelOrderNoContent) GetCode() int {
+	return s.Code
+}
+
+// GetMessage returns the value of Message.
+func (s *CancelOrderNoContent) GetMessage() string {
+	return s.Message
+}
+
+// SetCode sets the value of Code.
+func (s *CancelOrderNoContent) SetCode(val int) {
+	s.Code = val
+}
+
+// SetMessage sets the value of Message.
+func (s *CancelOrderNoContent) SetMessage(val string) {
+	s.Message = val
+}
 
 func (*CancelOrderNoContent) cancelOrderRes() {}
 

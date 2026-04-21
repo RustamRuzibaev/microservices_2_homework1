@@ -10,6 +10,22 @@ post:
   responses:
     '204':
       description: Order has been cancelled successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - code
+              - message
+            properties:
+              code:
+                type: integer
+                description: HTTP-код ответа
+                example: 204
+              message:
+                type: string
+                description: Описание ответа
+                example: "Order has been successfully cancelled" 
     '404':
       description: Order data for specified uuid not found
       content:
