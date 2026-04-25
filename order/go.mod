@@ -4,6 +4,7 @@ go 1.26.1
 
 require (
 	github.com/RustamRuzibaev/microservices_2_homework1/shared v0.0.0-20260418182858-e7000b2439e2
+	github.com/brianvoe/gofakeit v3.18.0+incompatible
 	github.com/go-chi/chi/v5 v5.2.5
 )
 
@@ -34,5 +35,8 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect
+	google.golang.org/grpc v1.80.0 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

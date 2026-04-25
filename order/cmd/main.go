@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -12,17 +13,27 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/brianvoe/gofakeit"
-	"github.com/brianvoe/gofakeit/v7"
+	//	"github.com/brianvoe/gofakeit/v7"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	google_uuid "github.com/google/uuid"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	//"google.golang.org/protobuf/types/known/timestamppb"
+	//"google.golang.org/protobuf/types/known/wrapperspb"
 
 	orderV1 "github.com/RustamRuzibaev/microservices_2_homework1/shared/pkg/openapi/order/v1"
+	inventoryV1 "github.com/RustamRuzibaev/microservices_2_homework1/shared/pkg/proto/inventory/v1"
+	paymentV1 "github.com/RustamRuzibaev/microservices_2_homework1/shared/pkg/proto/payment/v1"
 )
 
 const (
-	httpPort  = "8080"
-	serverURL = "http://localhost:8080"
+	httpPort     = "8080"
+	serverURL    = "http://localhost:8080"
+	inventoryURL = "localhost:50051"
+	paymentURL   = "localhost:50052"
 	// Таймауты для HTTP-сервера
 	readHeaderTimeout = 5 * time.Second
 	shutdownTimeout   = 10 * time.Second
@@ -74,24 +85,153 @@ func NewOrderHandler(storage *OrderStorage) *OrderHandler {
 	}
 }
 
-func (h *OrderHandler) CreateOrder(_ context.Context, req orderV1.CreateOrderRequest) (orderV1.CreateOrderResponse, error) {
-	// order := h.storage.GetOrder(params.OrderUUID)
-	// if order == nil {
-	// 	return &orderV1.NotFoundError{
-	// 		Code:    404,
-	// 		Message: "Order for uuid '" + params.OrderUUID + "' not found",
-	// 	}, nil
+func (h *OrderHandler) CreateOrder(ctx context.Context, req *orderV1.CreateOrderRequest) (orderV1.CreateOrderRes, error) {
+	//Инициализация клиента inventoryService
+
+	conn, err := grpc.NewClient(
+		inventoryURL,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Printf("failed to connect: %v\n", err)
+		return &orderV1.InternalServerError{
+			Code:    500,
+			Message: "URL for inventory service '" + inventoryURL + "' is unreachable",
+		}, nil
+	}
+	defer func() {
+		if cerr := conn.Close(); cerr != nil {
+			log.Printf("failed to close connect: %v", cerr)
+		}
+	}()
+
+	// Создаем gRPC клиент
+	client := inventoryV1.NewInventoryServiceClient(conn)
+
+	uuids := req.GetPartUuids()
+	stringUuids := []string{}
+	for _, uuid := range uuids {
+		stringUuids = append(stringUuids, uuid.String())
+	}
+	filter := &inventoryV1.PartsFilter{
+		Uuids: stringUuids,
+	}
+	inventoryRes, err := client.ListParts(ctx, &inventoryV1.ListPartsRequest{
+		Filter: filter,
+	})
+
+	if err != nil {
+		log.Printf("Ошибка при вызове InventoryService: %v", err)
+		return &orderV1.InternalServerError{
+			Code:    500,
+			Message: "Inventory service error: " + err.Error(),
+		}, nil
+	}
+
+	// if err != nil {
+	// 	log.Printf("Ошибка при создании заказа: %v", req)
 	// }
 
-	// return order, nil
+	if len(inventoryRes.Parts) != len(uuids) {
+		return &orderV1.BadRequestError{
+			Code:    400,
+			Message: fmt.Sprintf("Not all parts from %v has been found", uuids),
+		}, nil
+	}
+	var totalPrice float64
+	for _, part := range inventoryRes.Parts {
+		totalPrice = totalPrice + part.GetPrice()
+	}
 
-	// TODO: IMPLEMENT FUNC WITH INVENTORY SERVICE LISTPARTS() INTERACTION
-	resOrderUuid := gofakeit.UUID
-	resOrderPrice := gofakeit.Price(100, 1000)
-	return orderV1.CreateOrderResponse{
-		OrderUUID:  resOrderUuid,
-		TotalPrice: resOrderPrice,
+	order := &orderV1.OrderDto{
+		OrderUUID:  google_uuid.New(),
+		UserUUID:   req.UserUUID.String(),
+		PartUuids:  uuids,
+		TotalPrice: float32(totalPrice),
+		Status:     "PENDING_PAYMENT",
+	}
+	h.storage.mu.Lock()
+	h.storage.orders[order.OrderUUID.String()] = order
+	h.storage.mu.Unlock()
+
+	return &orderV1.CreateOrderResponse{
+		OrderUUID:  order.OrderUUID,
+		TotalPrice: order.TotalPrice,
 	}, nil
+
+}
+
+func (h *OrderHandler) PayOrder(ctx context.Context, req *orderV1.PayOrderRequest, params orderV1.PayOrderParams) (orderV1.PayOrderRes, error) {
+	//Инициализация клиента paymentService
+
+	conn, err := grpc.NewClient(
+		paymentURL,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Printf("failed to connect: %v\n", err)
+		return &orderV1.InternalServerError{
+			Code:    500,
+			Message: "URL for payment service '" + paymentURL + "' is unreachable",
+		}, nil
+	}
+	defer func() {
+		if cerr := conn.Close(); cerr != nil {
+			log.Printf("failed to close connect: %v", cerr)
+		}
+	}()
+
+	// Создаем gRPC клиент
+	client := paymentV1.NewPaymentServiceClient(conn)
+	h.storage.mu.Lock()
+	defer h.storage.mu.Unlock()
+	orderToPay, ok := h.storage.orders[params.OrderUUID]
+	if !ok {
+		return &orderV1.NotFoundError{
+			Code:    404,
+			Message: fmt.Sprintf("Order %v not found", params.OrderUUID),
+		}, nil
+	}
+
+	paymentMethods := map[string]paymentV1.PaymentMethod{
+		"UNKNOWN":        paymentV1.PaymentMethod_PAYMENT_METHOD_UNKNOWN,
+		"CARD":           paymentV1.PaymentMethod_PAYMENT_METHOD_CARD,
+		"SBP":            paymentV1.PaymentMethod_PAYMENT_METHOD_SBP,
+		"CREDIT_CARD":    paymentV1.PaymentMethod_PAYMENT_METHOD_CREDIT_CARD,
+		"INVESTOR_MONEY": paymentV1.PaymentMethod_PAYMENT_METHOD_INVESTOR_MONEY,
+	}
+
+	paymentRes, err := client.PayOrder(ctx, &paymentV1.PayOrderRequest{
+		OrderUuid:     orderToPay.OrderUUID.String(),
+		UserUuid:      orderToPay.UserUUID,
+		PaymentMethod: paymentMethods[req.PaymentMethod],
+	})
+	if err != nil {
+		log.Printf("Ошибка при вызове PaymentService: %v", err)
+		return &orderV1.InternalServerError{
+			Code:    500,
+			Message: "Payment service unavailable: " + err.Error(),
+		}, nil
+	}
+
+	payTransUUID, err := google_uuid.Parse(paymentRes.TransactionUuid)
+	if err != nil {
+		//log.Fatalf("Error:%v cannot make uuid out of %v", err, paymentRes.TransactionUuid)
+		log.Printf("Ошибка при вызове : google_uuid.Parse()%v", err)
+		return &orderV1.InternalServerError{
+			Code:    500,
+			Message: "PayOrder error: " + err.Error(),
+		}, nil
+	}
+
+	orderToPay.TransactionUUID = orderV1.NewOptUUID(payTransUUID)
+	orderToPay.PaymentMethod = orderV1.NewOptNilPaymentMethod(orderV1.PaymentMethod(req.PaymentMethod))
+	orderToPay.Status = orderV1.OrderStatusPAID
+
+	return &orderV1.PayOrderResponse{
+		TransactionUUID: payTransUUID,
+	}, nil
+
 }
 
 // GetOrderByUuid обрабатывает запрос на получение данных о заказах по uuid
@@ -139,6 +279,7 @@ func (h *OrderHandler) CancelOrder(_ context.Context, params orderV1.CancelOrder
 	}
 
 	// Обновляем данные в хранилище
+	order.Status = "CANCELLED"
 	h.storage.UpdateOrder(params.OrderUUID, order)
 
 	return &orderV1.CancelOrderNoContent{
@@ -178,7 +319,7 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(10 * time.Second))
-	r.Use(customMiddleware.RequestLogger)
+	//	r.Use(customMiddleware.RequestLogger)
 
 	// Монтируем обработчики OpenAPI
 	r.Mount("/", orderServer)
