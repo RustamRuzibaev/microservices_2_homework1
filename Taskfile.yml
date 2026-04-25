@@ -267,7 +267,15 @@ tasks:
     cmds:
       - |
         echo "🧪 Тестирование API микросервисов через gRPC и REST"
-        
+        echo "PREP: Создание детали"
+        PREP_RESPONSE=$({{.GRPCURL}} -plaintext -d '{"part":{"name": "Болт М12", "price": 20.0, "stock_quantity": 3000}}' localhost:50051 inventory.v1.InventoryService/AddPart)
+
+        if [[ -z "$PREP_RESPONSE" || "$PREP_RESPONSE" == *"error"* ]]; then
+          echo "❌ Не удалось создать деталь."
+          echo "🔍 Ответ сервера: $PREP_RESPONSE"
+          exit 1
+        fi
+
         echo "📦 Тест 1: Получение списка деталей из Inventory"
         PARTS_RESPONSE=$({{.GRPCURL}} -plaintext -d '{"filter":{}}' localhost:50051 inventory.v1.InventoryService/ListParts)
         
@@ -304,5 +312,153 @@ tasks:
           exit 1
         fi
         echo "✅ Успешно получена деталь: $PART_NAME"
+        
+        echo
+        echo "👤 Тест 3: Создание пользователя для тестов"
+        # Генерируем уникальный UUID для пользователя
+        USER_UUID=$(uuidgen | tr '[:upper:]' '[:lower:]')
+        echo "✅ Сгенерирован UUID пользователя: $USER_UUID"
+        
+        echo
+        echo "📝 Тест 4: Создание заказа (REST API)"
+        ORDER_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/orders/" \
+          -H "Content-Type: application/json" \
+          -d "{\"user_uuid\":\"$USER_UUID\",\"part_uuids\":[\"$PART_UUID\"]}")
+        
+        if [[ -z "$ORDER_RESPONSE" || "$ORDER_RESPONSE" == *"error"* ]]; then
+          echo "❌ Не удалось создать заказ."
+          echo "🔍 Ответ сервера: $ORDER_RESPONSE"
+          exit 1
+        fi
+        
+        # Извлекаем UUID заказа с учетом разных форматов JSON
+        ORDER_UUID=$(echo $ORDER_RESPONSE | grep -o '"order_uuid":"[^"]*' | cut -d'"' -f4)
+        if [ -z "$ORDER_UUID" ]; then
+          ORDER_UUID=$(echo $ORDER_RESPONSE | grep -o '"order_uuid": "[^"]*' | cut -d'"' -f4)
+          if [ -z "$ORDER_UUID" ]; then
+            echo "❌ Не удалось извлечь UUID заказа из ответа."
+            echo "🔍 Ответ сервера: $ORDER_RESPONSE"
+            exit 1
+          fi
+        fi
+        echo "✅ Успешно создан заказ с UUID: $ORDER_UUID"
+        
+        echo
+        echo "📊 Тест 5: Проверка начального статуса заказа (должен быть PENDING_PAYMENT)"
+        ORDER_INFO_RESPONSE=$(curl -s -X GET "http://localhost:8080/api/v1/orders/$ORDER_UUID")
+        
+        if [[ -z "$ORDER_INFO_RESPONSE" || "$ORDER_INFO_RESPONSE" == *"error"* ]]; then
+          echo "❌ Не удалось получить информацию о заказе."
+          echo "🔍 Ответ сервера: $ORDER_INFO_RESPONSE"
+          exit 1
+        fi
+        
+        # Извлекаем статус заказа с учетом разных форматов JSON
+        ORDER_STATUS=$(echo $ORDER_INFO_RESPONSE | grep -o '"status":"[^"]*' | cut -d'"' -f4)
+        if [ -z "$ORDER_STATUS" ]; then
+          ORDER_STATUS=$(echo $ORDER_INFO_RESPONSE | grep -o '"status": "[^"]*' | cut -d'"' -f4)
+          if [ -z "$ORDER_STATUS" ]; then
+            echo "❌ Не удалось извлечь статус заказа из ответа."
+            echo "🔍 Ответ сервера: $ORDER_INFO_RESPONSE"
+            exit 1
+          fi
+        fi
+        
+        # Проверяем, что начальный статус PENDING_PAYMENT
+        if [[ "$ORDER_STATUS" != *"PENDING_PAYMENT"* ]]; then
+          echo "❌ Неверный начальный статус заказа. Ожидался PENDING_PAYMENT, получен: $ORDER_STATUS"
+          exit 1
+        fi
+        echo "✅ Начальный статус заказа корректный: $ORDER_STATUS"
+        
+        echo
+        echo "💰 Тест 6: Оплата заказа (REST API)"
+        PAY_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/orders/$ORDER_UUID/pay" \
+          -H "Content-Type: application/json" \
+          -d "{\"payment_method\":\"PAYMENT_METHOD_CARD\"}")
+        
+        if [[ "$PAY_RESPONSE" == *"error"* ]]; then
+          echo "❌ Ошибка при оплате заказа."
+          echo "🔍 Ответ сервера: $PAY_RESPONSE"
+          exit 1
+        fi
+        echo "✅ Заказ успешно оплачен"
+        
+        echo
+        echo "📊 Тест 7: Проверка статуса после оплаты (должен быть PAID)"
+        ORDER_INFO_RESPONSE=$(curl -s -X GET "http://localhost:8080/api/v1/orders/$ORDER_UUID")
+        
+        # Извлекаем статус заказа
+        ORDER_STATUS=$(echo $ORDER_INFO_RESPONSE | grep -o '"status":"[^"]*' | cut -d'"' -f4)
+        if [ -z "$ORDER_STATUS" ]; then
+          ORDER_STATUS=$(echo $ORDER_INFO_RESPONSE | grep -o '"status": "[^"]*' | cut -d'"' -f4)
+        fi
+        
+        # Проверяем, что статус стал PAID
+        if [[ "$ORDER_STATUS" != *"PAID"* && "$ORDER_STATUS" != *"ASSEMBLED"* ]]; then
+          echo "❌ Неверный статус заказа после оплаты. Ожидался PAID или ASSEMBLED, получен: $ORDER_STATUS"
+          exit 1
+        fi
+        echo "✅ Статус заказа после оплаты: $ORDER_STATUS"
+        
+        echo
+        echo "📝 Тест 8: Создание второго заказа для отмены (REST API)"
+        ORDER2_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/orders/" \
+          -H "Content-Type: application/json" \
+          -d "{\"user_uuid\":\"$USER_UUID\",\"part_uuids\":[\"$PART_UUID\"]}")
+        
+        if [[ -z "$ORDER2_RESPONSE" || "$ORDER2_RESPONSE" == *"error"* ]]; then
+          echo "❌ Не удалось создать второй заказ."
+          echo "🔍 Ответ сервера: $ORDER2_RESPONSE"
+          exit 1
+        fi
+        
+        # Извлекаем UUID второго заказа с учетом разных форматов JSON
+        ORDER2_UUID=$(echo $ORDER2_RESPONSE | grep -o '"order_uuid":"[^"]*' | cut -d'"' -f4)
+        if [ -z "$ORDER2_UUID" ]; then
+          ORDER2_UUID=$(echo $ORDER2_RESPONSE | grep -o '"order_uuid": "[^"]*' | cut -d'"' -f4)
+          if [ -z "$ORDER2_UUID" ]; then
+            echo "❌ Не удалось извлечь UUID второго заказа из ответа."
+            echo "🔍 Ответ сервера: $ORDER2_RESPONSE"
+            exit 1
+          fi
+        fi
+        echo "✅ Успешно создан второй заказ с UUID: $ORDER2_UUID"
+        
+        # Проверяем его начальный статус
+        ORDER2_INFO=$(curl -s -X GET "http://localhost:8080/api/v1/orders/$ORDER2_UUID")
+        ORDER2_STATUS=$(echo $ORDER2_INFO | grep -o '"status":"[^"]*' | cut -d'"' -f4)
+        if [ -z "$ORDER2_STATUS" ]; then
+          ORDER2_STATUS=$(echo $ORDER2_INFO | grep -o '"status": "[^"]*' | cut -d'"' -f4)
+        fi
+        
+        if [[ "$ORDER2_STATUS" != *"PENDING_PAYMENT"* ]]; then
+          echo "❌ Неверный начальный статус второго заказа. Ожидался PENDING_PAYMENT, получен: $ORDER2_STATUS"
+          exit 1
+        fi
+        echo "✅ Начальный статус второго заказа: $ORDER2_STATUS"
+        
+        echo
+        echo "❌ Тест 9: Отмена второго заказа (REST API)"
+        echo "Ожидаем 2 секунды перед отменой..."
+        sleep 2
+        
+        curl -s -X POST "http://localhost:8080/api/v1/orders/$ORDER2_UUID/cancel"
+        
+        echo "Проверяем статус после отмены..."
+        
+        ORDER2_INFO=$(curl -s -X GET "http://localhost:8080/api/v1/orders/$ORDER2_UUID")
+        ORDER2_STATUS=$(echo $ORDER2_INFO | grep -o '"status":"[^"]*' | cut -d'"' -f4)
+        if [ -z "$ORDER2_STATUS" ]; then
+          ORDER2_STATUS=$(echo $ORDER2_INFO | grep -o '"status": "[^"]*' | cut -d'"' -f4)
+        fi
+        
+        if [[ "$ORDER2_STATUS" != *"CANCELLED"* ]]; then
+          echo "❌ Неверный статус отмененного заказа. Ожидался CANCELLED, получен: $ORDER2_STATUS"
+          echo "🔍 Детали заказа: $ORDER2_INFO"
+          exit 1
+        fi
+        echo "✅ Статус второго заказа после отмены: $ORDER2_STATUS"
+        
         echo
         echo "🎉 Все тесты API успешно выполнены!"
