@@ -157,6 +157,8 @@ func (s *inventoryService) ListParts(_ context.Context, req *inventoryV1.ListPar
 	//         - затем по странам производителей,
 	//         - затем по тегам.
 
+	log.Printf("IN ListParts")
+
 	// слайс возвращаемых деталей
 	parts := make([]*inventoryV1.Part, 0, len(s.parts))
 	if len(req.Filter.GetUuids()) == 0 &&
@@ -167,7 +169,20 @@ func (s *inventoryService) ListParts(_ context.Context, req *inventoryV1.ListPar
 		for _, part := range s.parts {
 			parts = append(parts, part)
 		}
+	} else if len(req.Filter.GetUuids()) != 0 {
+		log.Println("IN FOUND UUID")
+		partsUuids := req.Filter.GetUuids()
+		for _, partUuid := range partsUuids {
+			if part, ok := s.parts[partUuid]; !ok {
+				return nil, status.Errorf(codes.NotFound, "Search didn't found part with uuid %v", partUuid)
+
+			} else {
+				parts = append(parts, part)
+			}
+		}
+
 	} else {
+		log.Println("IN UNIMPLEMENTED")
 		return nil, status.Errorf(codes.Unimplemented, "Full search is still not implented for filter %v", req.Filter.String())
 	}
 	return &inventoryV1.ListPartsResponse{

@@ -17,7 +17,7 @@ import (
 	paymentV1 "github.com/RustamRuzibaev/microservices_2_homework1/shared/pkg/proto/payment/v1"
 )
 
-const grpcPort = 50051
+const grpcPort = 50052
 
 // paymentService реализует gRPC сервис отвечающий за оплату заказов
 type paymentService struct {
@@ -31,6 +31,7 @@ func (s *paymentService) PayOrder(_ context.Context, req *paymentV1.PayOrderRequ
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	log.Printf("IN PAYORDER ")
 	// Генерируем UUID для новой транзакции
 	newTransactionUUID := uuid.NewString()
 
